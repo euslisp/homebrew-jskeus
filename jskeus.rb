@@ -43,7 +43,7 @@ class Jskeus < Formula
 
     bin.mkpath
     executables.each do |exec|
-      (bin/exec).write <<-EOS.undent
+      (bin/exec).write <<-EOS
         #!/bin/bash
         EUSDIR=#{opt_prefix}/eus ARCHDIR=Darwin LD_LIBRARY_PATH=$EUSDIR/$ARCHDIR/bin:$LD_LIBRARY_PATH exec #{libexec}/#{exec} "$@"
       EOS
