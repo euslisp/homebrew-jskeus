@@ -12,8 +12,8 @@ class Jskeus < Formula
   depends_on "wget" => :build
 
   resource "euslisp" do
-    url "https://github.com/euslisp/EusLisp/archive/EusLisp-9.16.tar.gz"
-    sha256 "1e60ba14d627ecb0f426bd60ea91df971855b2b076efa1c50598b420cab93a08"
+    url "https://github.com/euslisp/EusLisp/archive/EusLisp-9.23.tar.gz"
+    sha256 "6c4436ddbdfd8bf065717a98cfd9d262ce283b06fff5b223b48dd2cf5fe3998f"
   end
 
   def install
