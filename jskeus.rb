@@ -12,11 +12,11 @@ class Jskeus < Formula
     sha256 "0db86c355a4fdea0465d51314c6457c27cb535a8af9019601479edc929026197" => :mavericks
   end
 
-  depends_on :x11
+  depends_on "wget" => :build
   depends_on "jpeg"
   depends_on "libpng"
   depends_on "mesalib-glw"
-  depends_on "wget" => :build
+  depends_on :x11
 
   resource "euslisp" do
     url "https://github.com/euslisp/EusLisp/archive/EusLisp-9.23.tar.gz"
@@ -31,7 +31,7 @@ class Jskeus < Formula
     prefix.install "Makefile", Dir["{doc,images,irteus}"]
     (prefix/"eus").install resource("euslisp")
 
-    executables = ["eus", "eus0", "eus1", "eus2", "euscomp", "eusg", "eusgl", "eusx", "irteus", "irteusgl"]
+    executables = %w[eus eus0 eus1 eus2 euscomp eusg eusgl eusx irteus irteusgl]
 
     cd prefix do
       system "make"
