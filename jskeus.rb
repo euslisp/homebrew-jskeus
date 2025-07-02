@@ -1,57 +1,66 @@
 class Jskeus < Formula
   desc "EusLisp software used by JSK at The University of Tokyo"
   homepage "https://github.com/euslisp/jskeus"
-  url "https://github.com/euslisp/jskeus/archive/1.2.1.tar.gz"
-  sha256 "69788a9b8d4b2137c84df475b9ea02e708a036246d3a3d4c7e16a390ce35b7ae"
-  head "https://github.com/euslisp/jskeus.git"
+  version "1.2.6"
 
-  bottle do
-    cellar :any
-    sha256 "7565502a3d89709a9f78b64d1e1db135760bbcaa76cd9c884c006707c5fb7157" => :el_capitan
-    sha256 "3bbb17d4248d11e341bd287bb60f6f920ca97a25923302fa020a2c197e7654eb" => :yosemite
-    sha256 "0db86c355a4fdea0465d51314c6457c27cb535a8af9019601479edc929026197" => :mavericks
+  # Use pre-built binaries to avoid OpenGL build issues in Homebrew sandbox
+  if OS.mac? && Hardware::CPU.arm?
+    url "https://github.com/euslisp/homebrew-jskeus/releases/download/1.2.6/jskeus-macos-arm64.tar.gz"
+    sha256 "2fe9a14fc530525cf22279afb20d2f29c4ec7e56afe7930ae88ddd31555c6efd"
+  elsif OS.mac? && Hardware::CPU.intel?
   end
 
+  # Runtime dependencies only (no build dependencies needed for pre-built binaries)
   depends_on "wget" => :build
   depends_on "jpeg"
   depends_on "libpng"
   depends_on "mesalib-glw"
-  depends_on :x11
-
-  resource "euslisp" do
-    url "https://github.com/euslisp/EusLisp/archive/EusLisp-9.23.tar.gz"
-    sha256 "6c4436ddbdfd8bf065717a98cfd9d262ce283b06fff5b223b48dd2cf5fe3998f"
+  depends_on "libx11"
+  on_macos do
+    depends_on "mesa-glu"
   end
 
   def install
-    ENV.deparallelize
-    ENV.O0
-
-    # jskeus needs to be compiled in Cellar
-    prefix.install "Makefile", Dir["{doc,images,irteus}"]
-    (prefix/"eus").install resource("euslisp")
-
-    executables = %w[eus eus0 eus1 eus2 euscomp eusg eusgl eusx irteus irteusgl]
-
-    cd prefix do
-      system "make"
-
-      executables.each do |exec|
-        libexec.install "eus/Darwin/bin/#{exec}"
+    on_macos do
+      unless File.exist?("/opt/X11/bin/Xquartz")
+        odie "XQuartz is required. Please install it first with: brew install --cask xquartz"
       end
     end
 
-    bin.mkpath
-    executables.each do |exec|
-      (bin/exec).write <<~EOS
+    # Install pre-built binary distribution
+    prefix.install Dir["*"]
+
+    arch_dir = "Darwin"
+    executables = %w[eus eus0 eus1 eus2 euscomp eusg eusgl eusx irteus irteusgl]
+
+    # Create wrapper scripts for executables with proper environment
+    executables.each do |exec_name|
+      actual_exec = nil
+      if File.exist?(prefix/"eus"/arch_dir/"bin"/exec_name)
+        actual_exec = prefix/"eus"/arch_dir/"bin"/exec_name
+      elsif File.exist?(prefix/"irteus"/exec_name)
+        actual_exec = prefix/"irteus"/exec_name
+      end
+      next unless actual_exec
+
+      # Make executable
+      chmod 0755, actual_exec
+
+      (bin/exec_name).write <<~EOS
         #!/bin/bash
-        EUSDIR=#{opt_prefix}/eus ARCHDIR=Darwin LD_LIBRARY_PATH=$EUSDIR/$ARCHDIR/bin:$LD_LIBRARY_PATH exec #{libexec}/#{exec} "$@"
+        export EUSDIR=#{opt_prefix}/eus
+        export ARCHDIR=#{arch_dir}
+        export PATH=$EUSDIR/$ARCHDIR/bin:$EUSDIR/$ARCHDIR/lib:$PATH
+        export LD_LIBRARY_PATH=$EUSDIR/$ARCHDIR/lib:$EUSDIR/$ARCHDIR/bin:$LD_LIBRARY_PATH
+        export DYLD_LIBRARY_PATH=$EUSDIR/$ARCHDIR/lib:$EUSDIR/$ARCHDIR/bin:$DYLD_LIBRARY_PATH
+        exec "#{actual_exec}" "$@"
       EOS
+      chmod 0755, bin/exec_name
     end
   end
 
   test do
-    system "#{bin}/eus", "(exit)"
-    system "#{bin}/irteusgl", "(exit)"
+    system "#{bin}/eus", "-e", "(exit)"
+    system "#{bin}/irteusgl", "-e", "(exit)"
   end
 end
